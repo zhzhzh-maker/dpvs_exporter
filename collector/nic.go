@@ -1,8 +1,9 @@
 package collector
 
 import (
-	"dpvs_exporter/lb"
 	"fmt"
+
+	"dpvs_exporter/lb"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -82,15 +83,13 @@ type NicStats struct {
 	InErrors  int64
 }
 
-// 模拟生成一些随机网卡数据
-func (c *NicRateCollector) generateRandomNicStats() []NicStats {
+func (c *NicRateCollector) getNicStats() []NicStats {
 	nicStats, err := c.comm.ListNicStats()
 	stats := make([]NicStats, 0, len(nicStats))
 	if err != nil {
 		return stats
 	}
 	for _, nic := range nicStats {
-		// 确保字段是非 nil 才进行解引用
 		stats = append(stats, NicStats{
 			Name:      safeDereference(nic.Name),
 			BuffAvail: safeDereferenceInt64(nic.BufAvail),
@@ -112,14 +111,13 @@ func (c *NicRateCollector) Collect(ch chan<- prometheus.Metric) {
 			fmt.Printf("[panic] NicRateCollector: %v", r)
 		}
 	}()
-	// 模拟调用comm.ListNicStats()改成用模拟数据
-	nicStats := c.generateRandomNicStats()
+	nicStats := c.getNicStats()
 
 	for _, stat := range nicStats {
 		nic, exists := nics[stat.Name]
 		if exists {
-			// ch <- prometheus.MustNewConstMetric(nic.buffAvail, prometheus.GaugeValue, float64(stat.BuffAvail), stat.Name)
-			// ch <- prometheus.MustNewConstMetric(nic.buffInUse, prometheus.GaugeValue, float64(stat.BuffInUse), stat.Name)
+			ch <- prometheus.MustNewConstMetric(nic.buffAvail, prometheus.CounterValue, float64(stat.BuffAvail), stat.Name)
+			ch <- prometheus.MustNewConstMetric(nic.buffInUse, prometheus.CounterValue, float64(stat.BuffInUse), stat.Name)
 			ch <- prometheus.MustNewConstMetric(nic.inBytes, prometheus.CounterValue, float64(stat.InBytes), stat.Name)
 			ch <- prometheus.MustNewConstMetric(nic.inPkts, prometheus.CounterValue, float64(stat.InPkts), stat.Name)
 			ch <- prometheus.MustNewConstMetric(nic.outBytes, prometheus.CounterValue, float64(stat.OutBytes), stat.Name)
@@ -174,7 +172,6 @@ func InitNicCollector(nicName []string) {
 	}
 }
 
-// 安全的解引用字符串（如果是 nil 返回空字符串）
 func safeDereference(ptr *string) string {
 	if ptr == nil {
 		return ""
@@ -182,7 +179,6 @@ func safeDereference(ptr *string) string {
 	return *ptr
 }
 
-// 安全的解引用 int64（如果是 nil 返回 0）
 func safeDereferenceInt64(ptr *int64) int64 {
 	if ptr == nil {
 		return 0

@@ -58,6 +58,7 @@ func main() {
 	if err != nil || serverInfo == nil {
 		return
 	}
+
 	collector.InitConnStatsController(serverInfo.Items)
 	collector.InitNicCollector(nicName)
 	dpvs := collector.NewDpvs(*agent)
